@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/coderbaozi/llm-center/config"
+	"github.com/coderbaozi/llm-center/setup"
 )
 
 func main() {
-	config.Setup()
+	setup.Setup()
 }
