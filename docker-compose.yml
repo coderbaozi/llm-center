@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  # 定义 MySQL 服务
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      # 设置 MySQL 根用户密码
+      MYSQL_ROOT_PASSWORD: root
+      # 创建一个名为 mydb 的数据库
+      MYSQL_DATABASE: test
+    ports:
+      # 将容器内的 3306 端口映射到宿主机的 3306 端口
+      - "3306:3306"
