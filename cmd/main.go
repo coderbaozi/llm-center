@@ -7,7 +7,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 
 	"github.com/llm-center/internal/config"
-	"github.com/llm-center/internal/database"
 	"github.com/llm-center/internal/handler"
 	"github.com/llm-center/internal/middleware"
 )
@@ -20,7 +19,7 @@ func main() {
 	}
 
 	// 初始化数据库连接
-	if err := database.InitDB(&cfg.Database); err != nil {
+	if err := config.InitDB(&cfg.Database); err != nil {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
 
@@ -29,16 +28,10 @@ func main() {
 	// Add middleware
 	h.Use(middleware.Logger())
 
-	// Register routes
 	h.GET("/ping", handler.Ping)
 
-	// User routes
-	h.POST("/api/register", handler.Register)
-	h.POST("/api/login", handler.Login)
-
 	// GitHub OAuth routes
-	// h.GET("/api/auth/github", handler.InitGithubOAuth)
-	h.GET("/api/auth/github/callback", handler.GithubCallback)
+	h.GET("/api/login/github", handler.GithubLogin)
 
 	h.Spin()
 }

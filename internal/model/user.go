@@ -8,7 +8,7 @@ type User struct {
 	Username       string    `json:"username" gorm:"size:50;unique"`
 	Password       string    `json:"password" gorm:"size:100"`
 	Email          string    `json:"email" gorm:"size:100;unique"`
-	GithubID       uint      `json:"github_id" gorm:"unique"`
+	GithubID       int       `json:"github_id" gorm:"unique"`
 	GithubUsername string    `json:"github_username" gorm:"size:50"`
 	GithubToken    string    `json:"github_token" gorm:"size:100"`
 	CreatedAt      time.Time `json:"created_at"`

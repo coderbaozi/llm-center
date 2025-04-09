@@ -7,140 +7,145 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/llm-center/internal/database"
+	"github.com/llm-center/internal/config"
 	"github.com/llm-center/internal/model"
+	"github.com/llm-center/internal/utils"
 	"gorm.io/gorm"
 )
 
 const (
-	githubAuthorizeURL = "https://github.com/login/oauth/authorize"
-	githubTokenURL     = "https://github.com/login/oauth/access_token"
-	githubUserAPIURL   = "https://api.github.com/user"
+	GithubAuthorizeURL = "https://github.com/login/oauth/authorize"
+	GithubTokenURL     = "https://github.com/login/oauth/access_token"
+	GithubUserAPIURL   = "https://api.github.com/user"
+	ClientID           = "Ov23liZTwgOpJyqDZwCD"
+	ClientSecret       = "219ef926b4c7e04f5df170177f7be86c7941b25d"
 )
 
-type GithubUser struct {
-	ID    uint   `json:"id"`
+type GitHubUserResponse struct {
+	ID    int    `json:"id"`
 	Login string `json:"login"`
+	Email string `json:"email"`
 }
 
-// InitGithubOAuth 初始化GitHub OAuth处理
-func InitGithubOAuth(h *app.RequestContext) {
-	clientID := "Ov23liZTwgOpJyqDZwCD"
-	redirectURI := os.Getenv("GITHUB_REDIRECT_URI")
+// getAccessToken 获取GitHub访问令牌
+func getAccessToken(code string) (string, error) {
 
-	authorizeURL := fmt.Sprintf("%s?client_id=%s&redirect_uri=%s&scope=user",
-		githubAuthorizeURL, clientID, redirectURI)
+	params := url.Values{}
+	params.Add("client_id", ClientID)
+	params.Add("client_secret", ClientSecret)
+	params.Add("code", code)
 
-	h.Redirect(302, []byte(authorizeURL))
+	resp, err := http.PostForm(GithubTokenURL, params)
+	if err != nil {
+		return "", fmt.Errorf("failed to request token: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
+	}
+
+	values, err := url.ParseQuery(string(body))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return values.Get("access_token"), nil
 }
 
-// GithubCallback 处理GitHub OAuth回调
-func GithubCallback(ctx context.Context, c *app.RequestContext) {
+// getGitHubUserInfo 获取GitHub用户信息
+func getGitHubUserInfo(token string) (*GitHubUserResponse, error) {
+	req, _ := http.NewRequest("GET", GithubUserAPIURL, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user info: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var user GitHubUserResponse
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		return nil, fmt.Errorf("failed to decode user info: %w", err)
+	}
+
+	return &user, nil
+}
+
+// 将用户保存到自己的数据库中 // 并且生成 token 更新到数据库中
+func handleUserCreation(db *gorm.DB, githubUser *GitHubUserResponse, token string) (*model.User, error) {
+	var user model.User
+	result := db.Where("github_id = ?", githubUser.ID).First(&user)
+
+	if result.Error == gorm.ErrRecordNotFound {
+		newUser := model.User{
+			Username: githubUser.Login,
+			Email:    githubUser.Email,
+		}
+
+		if err := db.Create(&newUser).Error; err != nil {
+			return nil, fmt.Errorf("user creation failed: %w", err)
+		}
+		return &newUser, nil
+	}
+
+	if result.Error != nil {
+		return nil, fmt.Errorf("database error: %w", result.Error)
+	}
+
+	if user.Email != githubUser.Email || user.Username != githubUser.Login {
+		user.Email = githubUser.Email
+		user.Username = githubUser.Login
+		if err := db.Save(&user).Error; err != nil {
+			return nil, fmt.Errorf("user update failed: %w", err)
+		}
+	}
+
+	return &user, nil
+}
+
+func GithubLogin(ctx context.Context, c *app.RequestContext) {
+	// 验证授权码
 	code := c.Query("code")
 	if code == "" {
-		c.JSON(400, map[string]interface{}{
-			"error": "Missing code parameter",
-		})
+		utils.SendError(c, http.StatusBadRequest, "缺少授权码参数")
 		return
 	}
 
 	// 获取访问令牌
-	clientID := ""
-	clientSecret := ""
-	tokenURL := fmt.Sprintf("%s?client_id=%s&client_secret=%s&code=%s",
-		githubTokenURL, clientID, clientSecret, code)
-
-	resp, err := http.Post(tokenURL, "application/json", nil)
-
+	accessToken, err := getAccessToken(code)
 	if err != nil {
-		c.JSON(500, map[string]interface{}{
-			"error": "Failed to get access token",
-		})
+		utils.SendError(c, http.StatusInternalServerError, "获取访问令牌失败")
 		return
 	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
 
+	// TODO: debug 这里看看到底要存什么信息
+	// 获取用户信息
+	githubUser, err := getGitHubUserInfo(accessToken)
 	if err != nil {
-		c.JSON(500, map[string]interface{}{
-			"error": "Failed to read response body",
-		})
+		utils.SendError(c, http.StatusInternalServerError, "获取用户信息失败")
 		return
 	}
 
-	// 解析访问令牌
-	var tokenResp struct {
-		AccessToken string `json:"access_token"`
-	}
-
-	respBodyQuery, err := url.ParseQuery(string(body))
+	// 处理用户数据
+	db := config.GetDB()
+	user, err := handleUserCreation(db, githubUser, accessToken)
 	if err != nil {
-		c.JSON(500, map[string]interface{}{
-			"error": "fuck the github",
-		})
+		utils.SendError(c, http.StatusInternalServerError, "用户数据处理失败")
 		return
 	}
-
-	tokenResp.AccessToken = respBodyQuery.Get("access_token")
-	req, _ := http.NewRequest("GET", githubUserAPIURL, nil)
-	req.Header.Set("Authorization", "Bearer "+tokenResp.AccessToken)
-
-	client := &http.Client{}
-	userResp, err := client.Do(req)
-	if err != nil {
-		c.JSON(500, map[string]interface{}{
-			"error": "Failed to get user info",
-		})
-		return
-	}
-	defer userResp.Body.Close()
-
-	userBody, _ := io.ReadAll(userResp.Body)
-	var githubUser GithubUser
-	if err := json.Unmarshal(userBody, &githubUser); err != nil {
-		c.JSON(500, map[string]interface{}{
-			"error": "Failed to parse user info",
-		})
-		return
-	}
-	fmt.Println("hei qianziyang", string(userBody), githubUser)
-
-	// 查找或创建用户
-	db := database.GetDB()
-	var user model.User
-
-	result := db.Where("github_id = ?", githubUser.ID).First(&user)
-	if result.Error == gorm.ErrRecordNotFound {
-		// 创建新用户
-		user = model.User{
-			Username:       githubUser.Login,
-			GithubID:       githubUser.ID,
-			GithubUsername: githubUser.Login,
-			GithubToken:    tokenResp.AccessToken,
-		}
-
-		if err := db.Create(&user).Error; err != nil {
-			c.JSON(500, map[string]interface{}{
-				"error": "Failed to create user",
-			})
-			return
-		}
-	} else if result.Error != nil {
-		c.JSON(500, map[string]interface{}{
-			"error": "Database error",
-		})
-		return
-	} else {
-		// 更新现有用户的GitHub令牌
-		user.GithubToken = tokenResp.AccessToken
-		db.Save(&user)
-	}
-
-	c.JSON(200, map[string]interface{}{
-		"message": "GitHub登录成功",
-		"user":    user,
-	})
+	utils.SendSuccess(c, "GitHub登录成功", user)
 }

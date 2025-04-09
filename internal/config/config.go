@@ -12,7 +12,16 @@ type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Log      LogConfig      `yaml:"log"`
 	Database DatabaseConfig `yaml:"database"`
-	Github   GithubConfig   `yaml:"github"`
+}
+
+type DatabaseConfig struct {
+	Driver   string `yaml:"driver"`
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	Database string `yaml:"database"`
+	Charset  string `yaml:"charset"`
 }
 
 // ServerConfig 服务器配置结构
@@ -29,13 +38,6 @@ type LogConfig struct {
 	MaxSize    int    `yaml:"max_size"`
 	MaxAge     int    `yaml:"max_age"`
 	MaxBackups int    `yaml:"max_backups"`
-}
-
-// GithubConfig GitHub OAuth配置结构
-type GithubConfig struct {
-	ClientID     string `yaml:"client_id"`
-	ClientSecret string `yaml:"client_secret"`
-	RedirectURI  string `yaml:"redirect_uri"`
 }
 
 // LoadConfig 从文件加载配置
