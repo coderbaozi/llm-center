@@ -14,7 +14,7 @@ database:
   driver: "mysql"
   host: "120.46.188.49"
   port: 3306
-  username: "llm-center"
+  username: "bun"
   password: "123456"
   database: "llm-center"
   charset: "utf8mb4"

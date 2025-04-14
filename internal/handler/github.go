@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/llm-center/internal/config"
@@ -24,9 +25,13 @@ const (
 )
 
 type GitHubUserResponse struct {
-	ID    int    `json:"id"`
-	Login string `json:"login"`
-	Email string `json:"email"`
+	ID        uint   `json:"id"`
+	AvatarURL string `json:"avatar_url"`
+	Name      string `json:"name"`
+	Company   string `json:"company"`
+	Location  string `json:"location"`
+	Email     string `json:"email"`
+	Bio       string `json:"bio"`
 }
 
 // getAccessToken 获取GitHub访问令牌
@@ -85,15 +90,21 @@ func getGitHubUserInfo(token string) (*GitHubUserResponse, error) {
 	return &user, nil
 }
 
-// 将用户保存到自己的数据库中 // 并且生成 token 更新到数据库中
-func handleUserCreation(db *gorm.DB, githubUser *GitHubUserResponse, token string) (*model.User, error) {
+// 将用户保存到自己的数据库中
+func handleUserCreation(db *gorm.DB, githubUser *GitHubUserResponse) (*model.User, error) {
 	var user model.User
 	result := db.Where("github_id = ?", githubUser.ID).First(&user)
 
 	if result.Error == gorm.ErrRecordNotFound {
 		newUser := model.User{
-			Username: githubUser.Login,
-			Email:    githubUser.Email,
+			Username:  githubUser.Name,
+			Email:     githubUser.Email,
+			GithubID:  githubUser.ID,
+			AvatarURL: githubUser.AvatarURL,
+			Company:   githubUser.Company,
+			Location:  githubUser.Location,
+			Bio:       githubUser.Bio,
+			CreatedAt: time.Now(),
 		}
 
 		if err := db.Create(&newUser).Error; err != nil {
@@ -106,17 +117,10 @@ func handleUserCreation(db *gorm.DB, githubUser *GitHubUserResponse, token strin
 		return nil, fmt.Errorf("database error: %w", result.Error)
 	}
 
-	if user.Email != githubUser.Email || user.Username != githubUser.Login {
-		user.Email = githubUser.Email
-		user.Username = githubUser.Login
-		if err := db.Save(&user).Error; err != nil {
-			return nil, fmt.Errorf("user update failed: %w", err)
-		}
-	}
-
 	return &user, nil
 }
 
+// 在handleUserCreation之后添加token生成逻辑
 func GithubLogin(ctx context.Context, c *app.RequestContext) {
 	// 验证授权码
 	code := c.Query("code")
@@ -132,7 +136,6 @@ func GithubLogin(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// TODO: debug 这里看看到底要存什么信息
 	// 获取用户信息
 	githubUser, err := getGitHubUserInfo(accessToken)
 	if err != nil {
@@ -142,10 +145,16 @@ func GithubLogin(ctx context.Context, c *app.RequestContext) {
 
 	// 处理用户数据
 	db := config.GetDB()
-	user, err := handleUserCreation(db, githubUser, accessToken)
+	user, err := handleUserCreation(db, githubUser)
 	if err != nil {
 		utils.SendError(c, http.StatusInternalServerError, "用户数据处理失败")
 		return
 	}
-	utils.SendSuccess(c, "GitHub登录成功", user)
+	// TODO:生成一个token然后重定向的时候带上这个token
+	jwtToken, err := utils.GenerateJWT(user)
+	if err != nil {
+		utils.SendError(c, http.StatusInternalServerError, "生成JWT失败")
+		return
+	}
+	utils.SendSuccess(c, "GitHub登录成功", jwtToken)
 }

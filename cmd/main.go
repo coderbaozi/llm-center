@@ -7,8 +7,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 
 	"github.com/llm-center/internal/config"
-	"github.com/llm-center/internal/handler"
-	"github.com/llm-center/internal/middleware"
+	"github.com/llm-center/internal/router"
 )
 
 func main() {
@@ -25,13 +24,7 @@ func main() {
 
 	h := server.New(server.WithHostPorts(fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)))
 
-	// Add middleware
-	h.Use(middleware.Logger())
-
-	h.GET("/ping", handler.Ping)
-
-	// GitHub OAuth routes
-	h.GET("/api/login/github", handler.GithubLogin)
+	router.RegisterRoutes(h)
 
 	h.Spin()
 }
