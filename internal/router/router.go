@@ -19,5 +19,6 @@ func RegisterRoutes(h *server.Hertz) {
 	{
 		auth.GET("/user", handler.GetUserInfo)
 		auth.GET("/get-jwt", handler.GetJwtToken)
+		auth.POST("/completions", handler.Completions)
 	}
 }

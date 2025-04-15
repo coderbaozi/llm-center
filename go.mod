@@ -10,6 +10,8 @@ require (
 	gorm.io/gorm v1.25.12
 )
 
+require github.com/tidwall/sjson v1.2.5 // indirect
+
 require (
 	github.com/bytedance/gopkg v0.1.0 // indirect
 	github.com/bytedance/sonic v1.12.7 // indirect
@@ -23,6 +25,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/nyaruka/phonenumbers v1.0.55 // indirect
+	github.com/openai/openai-go v0.1.0-alpha.62
 	github.com/smartystreets/goconvey v1.8.1 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect

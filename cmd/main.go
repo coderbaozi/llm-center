@@ -8,6 +8,7 @@ import (
 
 	"github.com/llm-center/internal/config"
 	"github.com/llm-center/internal/router"
+	"github.com/llm-center/internal/sdk"
 )
 
 func main() {
@@ -25,6 +26,7 @@ func main() {
 	h := server.New(server.WithHostPorts(fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)))
 
 	router.RegisterRoutes(h)
+	sdk.InitClients()
 
 	h.Spin()
 }
