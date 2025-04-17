@@ -29,7 +29,7 @@ func VerifyJWT(tokenString string) (*jwt.Token, error) {
 		return []byte("secret"), nil
 	})
 	if err != nil {
-		return nil, err
+		return token, err
 	}
 	return token, nil
 }

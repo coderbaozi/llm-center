@@ -6,14 +6,21 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 
+	"path/filepath"
+	"runtime"
+
 	"github.com/llm-center/internal/config"
 	"github.com/llm-center/internal/router"
 	"github.com/llm-center/internal/sdk"
 )
 
 func main() {
+	// 获取配置文件绝对路径
+	_, filename, _, _ := runtime.Caller(0)
+	configPath := filepath.Join(filepath.Dir(filename), "../configs/config.yaml")
+
 	// 加载配置文件
-	cfg, err := config.LoadConfig("configs/config.yaml")
+	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		log.Fatalf("加载配置文件失败: %v", err)
 	}

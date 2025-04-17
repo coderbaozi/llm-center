@@ -21,7 +21,6 @@ type UserInfoResponse struct {
 
 // GetUserInfo 获取当前用户信息
 func GetUserInfo(ctx context.Context, c *app.RequestContext) {
-	// 从JWT Claims中获取用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
 		utils.SendError(c, 401, "用户未认证")
