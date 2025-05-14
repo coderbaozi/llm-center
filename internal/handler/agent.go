@@ -8,18 +8,16 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/llm-center/internal/config"
 	"github.com/llm-center/internal/model"
+	"github.com/llm-center/internal/sdk"
 	"github.com/llm-center/internal/utils"
 	"gorm.io/gorm"
 )
 
-// CreateAgentRequest 创建 Agent 的请求体结构
 type CreateAgentRequest struct {
-	Name         string `json:"name" vd:"required"` // vd:required 表示必填
+	Name         string `json:"name" vd:"required"`
 	Description  string `json:"description"`
-	SystemPrompt string `json:"system_prompt"`
-	ModelName    string `json:"model_name"`
-	IsPublic     *bool  `json:"is_public"` // 使用指针以区分未传和传 false
-	Status       *int   `json:"status"`    // 使用指针以区分未传和传 0
+	Avatar       string `json:"avatar"`
+	ConversionID string `json:"conversion_id"`
 }
 
 // CreateAgent 创建一个新的 Agent
@@ -45,24 +43,12 @@ func CreateAgent(ctx context.Context, c *app.RequestContext) {
 	agent := model.Agent{
 		Name:         req.Name,
 		Description:  req.Description,
-		SystemPrompt: req.SystemPrompt,
-		ModelName:    req.ModelName,
+		Avatar:       req.Avatar,
 		CreatorID:    userID,
-	}
-
-	// 处理可选字段的默认值
-	if req.IsPublic != nil {
-		agent.IsPublic = *req.IsPublic
-	} else {
-		agent.IsPublic = false // 默认不公开
-	}
-	if req.Status != nil {
-		agent.Status = *req.Status
-	} else {
-		agent.Status = 1 // 默认启用
-	}
-	if agent.ModelName == "" {
-		agent.ModelName = "gpt-3.5-turbo" // 默认模型
+		SystemPrompt: "",   // 默认空系统提示词
+		IsPublic:     true, // 默认公开
+		Status:       1,    // 默认启用
+		ConversionId: &req.ConversionID,
 	}
 
 	db := config.GetDB()
@@ -93,8 +79,24 @@ func GetAgent(ctx context.Context, c *app.RequestContext) {
 		utils.SendError(c, http.StatusInternalServerError, "查询 Agent 失败: "+err.Error())
 		return
 	}
+	respData := map[string]interface{}{
+		"agent": agent,
+	}
+	// 这里如果agent rag_embedding_id 存在，就查询rag_embedding表
+	if agent.RagEmbeddingID != nil && *agent.RagEmbeddingID != "" {
+		var embedding model.RagEmbedding
+		if err := db.Where("vector_id = ?", *agent.RagEmbeddingID).First(&embedding).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+			} else {
+				utils.SendError(c, http.StatusInternalServerError, "查询 Embedding 失败: "+err.Error())
+				return
+			}
+		} else {
+			respData["embedding"] = &embedding
+		}
+	}
 
-	utils.SendSuccess(c, "查询成功", agent)
+	utils.SendSuccess(c, "查询成功", respData)
 }
 
 // ListAgents 获取 Agent 列表 (支持分页)
@@ -110,14 +112,6 @@ func ListAgents(ctx context.Context, c *app.RequestContext) {
 
 	query := db.Model(&model.Agent{})
 
-	// 可选：应用过滤条件
-	// if creatorIDStr != "" {
-	// 	creatorID, err := strconv.ParseUint(creatorIDStr, 10, 64)
-	// 	if err == nil {
-	// 		query = query.Where("creator_id = ?", uint(creatorID))
-	// 	}
-	// }
-	// 只查询公开的或者自己创建的
 	userIDValue, exists := c.Get("userID")
 	if exists {
 		userID, ok := userIDValue.(uint)
@@ -152,12 +146,18 @@ func ListAgents(ctx context.Context, c *app.RequestContext) {
 
 // UpdateAgentRequest 更新 Agent 的请求体结构
 type UpdateAgentRequest struct {
-	Name         *string `json:"name"` // 使用指针表示可选更新
-	Description  *string `json:"description"`
-	SystemPrompt *string `json:"system_prompt"`
-	ModelName    *string `json:"model_name"`
-	IsPublic     *bool   `json:"is_public"`
-	Status       *int    `json:"status"`
+	Name         *string  `json:"name"` // 使用指针表示可选更新
+	Description  *string  `json:"description"`
+	SystemPrompt *string  `json:"system_prompt"`
+	ModelName    *string  `json:"model_name"`
+	IsPublic     *bool    `json:"is_public"`
+	Status       *int     `json:"status"`
+	Temperature  *float64 `json:"temperature"`
+	TopP         *float64 `json:"top_p"`
+	TopK         *float64 `json:"top_k"`
+	Text         *string  `json:"embedding_text"`
+	FileName     *string  `json:"file_name"`
+	ConversionID *string  `json:"conversion_id"`
 }
 
 // UpdateAgent 更新指定的 Agent
@@ -219,6 +219,34 @@ func UpdateAgent(ctx context.Context, c *app.RequestContext) {
 	}
 	if req.Status != nil {
 		updates["status"] = *req.Status
+	}
+	if req.Temperature != nil {
+		updates["temperature"] = *req.Temperature
+	}
+	if req.TopP != nil {
+		updates["top_p"] = *req.TopP
+	}
+	if req.TopK != nil {
+		updates["top_k"] = *req.TopK
+	}
+	if req.Text != nil {
+		uuid, err := utils.RandomString()
+		if err != nil {
+			utils.SendError(c, http.StatusInternalServerError, "生成 UUID 失败: "+err.Error())
+			return
+		}
+		sdk.AddEmbeddings(req.Text, &uuid) // 使用解码后的文本
+		embeddingRecord := model.RagEmbedding{
+			VectorID: uuid,
+			Text:     *req.Text, // 使用解码后的文本
+			FileName: *req.FileName,
+		}
+		updates["rag_embedding_id"] = uuid
+		// 更新embeddings 表
+		if err := db.Create(&embeddingRecord).Error; err != nil {
+			utils.SendError(c, http.StatusInternalServerError, "创建 Embedding 记录失败: "+err.Error())
+			return
+		}
 	}
 
 	// 如果没有需要更新的字段，直接返回成功

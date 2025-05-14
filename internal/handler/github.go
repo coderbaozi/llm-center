@@ -156,5 +156,15 @@ func GithubLogin(ctx context.Context, c *app.RequestContext) {
 		utils.SendError(c, http.StatusInternalServerError, "生成JWT失败")
 		return
 	}
-	utils.SendSuccess(c, "GitHub登录成功", jwtToken)
+
+	frontendCallbackURL := "http://localhost:3000/login" // 假设前端 Vite 项目运行在 5173 端口
+
+	// 构建带 token 的重定向 URL
+	redirectURL, err := url.Parse(frontendCallbackURL)
+	query := redirectURL.Query()
+	query.Set("token", jwtToken)
+	redirectURL.RawQuery = query.Encode()
+
+	// 重定向到前端页面，前端在该页面获取 token 并存入 Cookie 或 localStorage
+	c.Redirect(http.StatusFound, []byte(redirectURL.String()))
 }

@@ -1,6 +1,8 @@
 module github.com/llm-center
 
-go 1.21
+go 1.23.0
+
+toolchain go1.23.9
 
 require (
 	github.com/cloudwego/hertz v0.9.6
@@ -10,7 +12,12 @@ require (
 	gorm.io/gorm v1.25.12
 )
 
-require github.com/tidwall/sjson v1.2.5 // indirect
+require (
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/hertz-contrib/cors v0.1.0 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
+	golang.org/x/crypto v0.38.0 // indirect
+)
 
 require (
 	github.com/bytedance/gopkg v0.1.0 // indirect
@@ -33,7 +40,7 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )

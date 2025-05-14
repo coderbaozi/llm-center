@@ -39,7 +39,15 @@ func InitDB(cfg *DatabaseConfig) error {
 	}
 
 	// 自动迁移数据库表结构
-	if err := db.AutoMigrate(&model.User{}); err != nil {
+	if err := db.AutoMigrate(
+		&model.User{},
+		&model.Agent{},
+		&model.Message{}, // 假设 Message 指的是 ConversationMessage
+		&model.Conversations{},
+		&model.EvaluationTask{},
+		&model.Model{},
+		&model.RagEmbedding{},
+	); err != nil {
 		return fmt.Errorf("数据库迁移失败: %v", err)
 	}
 

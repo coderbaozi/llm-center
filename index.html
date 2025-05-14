@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统数据模型</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #343a40;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        h2 {
+            color: #495057;
+            margin-top: 30px;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #e9ecef;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        code {
+            background-color: #e9ecef;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        }
+        .filepath {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>系统数据模型概览</h1>
+
+        <!-- 用户模型 -->
+        <h2>1. 用户模型 (<code>users</code> 表)</h2>
+        <p class="filepath">源文件: <code>/Users/bytedance/self/llm-center/internal/model/user.go</code> | 模型名: <code>User</code></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>字段名 (Go)</th>
+                    <th>数据库类型</th>
+                    <th>描述</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>ID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>用户唯一标识符</td>
+                    <td>主键</td>
+                </tr>
+                <tr>
+                    <td><code>Username</code></td>
+                    <td><code>VARCHAR(50)</code></td>
+                    <td>用户名</td>
+                    <td>唯一索引</td>
+                </tr>
+                <tr>
+                    <td><code>Password</code></td>
+                    <td><code>VARCHAR(100)</code></td>
+                    <td>用户密码 (通常存储哈希值)</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>Email</code></td>
+                    <td><code>VARCHAR(100)</code></td>
+                    <td>用户邮箱地址</td>
+                    <td>唯一索引</td>
+                </tr>
+                <tr>
+                    <td><code>GithubID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>用户的 GitHub ID</td>
+                    <td>唯一索引, 用于 GitHub OAuth</td>
+                </tr>
+                <tr>
+                    <td><code>AvatarURL</code></td>
+                    <td><code>TEXT</code></td>
+                    <td>用户头像链接</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>CreatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>用户创建时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>UpdatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>用户信息最后更新时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>Company</code></td>
+                    <td><code>VARCHAR(255)</code></td>
+                    <td>用户所在公司</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>Location</code></td>
+                    <td><code>VARCHAR(255)</code></td>
+                    <td>用户所在地理位置</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>Bio</code></td>
+                    <td><code>TEXT</code></td>
+                    <td>用户个人简介</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>DeletedAt</code></td>
+                    <td><code>DATETIME NULL</code></td>
+                    <td>软删除时间</td>
+                    <td>由 GORM 自动管理 (如果启用了软删除)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Agent 模型 -->
+        <h2>2. Agent 模型 (<code>agents</code> 表)</h2>
+        <p class="filepath">源文件: <code>/Users/bytedance/self/llm-center/internal/model/agent.go</code> | 模型名: <code>Agent</code></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>字段名 (Go)</th>
+                    <th>数据库类型</th>
+                    <th>描述</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>ID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>Agent 唯一标识符</td>
+                    <td>主键</td>
+                </tr>
+                <tr>
+                    <td><code>Name</code></td>
+                    <td><code>VARCHAR(100)</code></td>
+                    <td>Agent 名称</td>
+                    <td>非空</td>
+                </tr>
+                <tr>
+                    <td><code>Description</code></td>
+                    <td><code>TEXT</code></td>
+                    <td>Agent 详细描述</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>SystemPrompt</code></td>
+                    <td><code>TEXT</code></td>
+                    <td>Agent 的系统提示词</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>ModelName</code></td>
+                    <td><code>VARCHAR(100)</code></td>
+                    <td>Agent 默认使用的 AI 模型名称</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>CreatorID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>创建该 Agent 的用户 ID</td>
+                    <td>索引, 外键关联到 <code>users.id</code></td>
+                </tr>
+                <tr>
+                    <td><code>Status</code></td>
+                    <td><code>INT</code></td>
+                    <td>Agent 状态 (例如: 1=启用, 0=禁用)</td>
+                    <td>默认为 1</td>
+                </tr>
+                <tr>
+                    <td><code>IsPublic</code></td>
+                    <td><code>BOOLEAN</code></td>
+                    <td>Agent 是否公开</td>
+                    <td>默认为 false</td>
+                </tr>
+                <tr>
+                    <td><code>Temperature</code></td>
+                    <td><code>DOUBLE</code></td>
+                    <td>模型生成的温度参数</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>TopP</code></td>
+                    <td><code>DOUBLE</code></td>
+                    <td>模型生成的 Top-P 采样参数</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>TopK</code></td>
+                    <td><code>DOUBLE</code></td>
+                    <td>模型生成的 Top-K 采样参数</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>Avatar</code></td>
+                    <td><code>TEXT</code></td>
+                    <td>Agent 的头像链接或 Base64 数据</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>RagEmbeddingID</code></td>
+                    <td><code>BIGINT UNSIGNED NULL</code></td>
+                    <td>关联的 RAG 嵌入记录的 ID (可选)</td>
+                    <td>索引, 外键关联到 <code>rag_embeddings.id</code></td>
+                </tr>
+                <tr>
+                    <td><code>CreatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>创建时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>UpdatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>最后更新时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>DeletedAt</code></td>
+                    <td><code>DATETIME NULL</code></td>
+                    <td>软删除时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 对话消息模型 -->
+        <h2>3. 对话消息模型 (<code>conversation_messages</code> 表)</h2>
+        <p class="filepath">源文件: <code>/Users/bytedance/self/llm-center/internal/model/conversation_message.go</code> (假设) | 模型名: <code>ConversationMessage</code></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>字段名 (Go)</th>
+                    <th>数据库类型</th>
+                    <th>描述</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>ID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>消息唯一标识符</td>
+                    <td>主键</td>
+                </tr>
+                <tr>
+                    <td><code>ConversationID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>所属对话的 ID</td>
+                    <td>索引, 非空, 外键关联到 <code>conversations.id</code></td>
+                </tr>
+                <tr>
+                    <td><code>UserID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>消息发送者用户 ID</td>
+                    <td>索引, 外键关联到 <code>users.id</code></td>
+                </tr>
+                <tr>
+                    <td><code>AgentID</code></td>
+                    <td><code>BIGINT UNSIGNED NULL</code></td>
+                    <td>消息关联的 Agent ID (可选)</td>
+                    <td>索引, 外键关联到 <code>agents.id</code></td>
+                </tr>
+                <tr>
+                    <td><code>Role</code></td>
+                    <td><code>VARCHAR(50)</code></td>
+                    <td>消息发送者角色 (user, assistant, system)</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>Content</code></td>
+                    <td><code>TEXT</code></td>
+                    <td>消息的具体内容</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>ModelName</code></td>
+                    <td><code>VARCHAR(100) NULL</code></td>
+                    <td>生成助手回复时使用的模型名称 (可选)</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>CreatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>创建时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>UpdatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>最后更新时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>DeletedAt</code></td>
+                    <td><code>DATETIME NULL</code></td>
+                    <td>软删除时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 对话模型 -->
+        <h2>4. 对话模型 (<code>conversations</code> 表)</h2>
+        <p class="filepath">源文件: <code>/Users/bytedance/self/llm-center/internal/model/conversions.go</code> | 模型名: <code>Conversation</code></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>字段名 (Go)</th>
+                    <th>数据库类型</th>
+                    <th>描述</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>ID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>对话唯一标识符</td>
+                    <td>主键</td>
+                </tr>
+                <tr>
+                    <td><code>UserID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>发起对话的用户 ID</td>
+                    <td>索引, 非空, 外键关联到 <code>users.id</code></td>
+                </tr>
+                <tr>
+                    <td><code>AgentID</code></td>
+                    <td><code>BIGINT UNSIGNED NULL</code></td>
+                    <td>对话关联的 Agent ID (可选)</td>
+                    <td>索引, 外键关联到 <code>agents.id</code></td>
+                </tr>
+                <tr>
+                    <td><code>Title</code></td>
+                    <td><code>VARCHAR(255)</code></td>
+                    <td>对话标题 (可选)</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>LastActivityAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>对话的最后活动时间，用于排序</td>
+                    <td>索引</td>
+                </tr>
+                <tr>
+                    <td><code>Messages</code></td>
+                    <td><code>N/A (关联关系)</code></td>
+                    <td>该对话包含的消息列表 (GORM 关联)</td>
+                    <td>不直接在数据库创建列, 用于 ORM 层面加载</td>
+                </tr>
+                <tr>
+                    <td><code>CreatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>创建时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>UpdatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>最后更新时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>DeletedAt</code></td>
+                    <td><code>DATETIME NULL</code></td>
+                    <td>软删除时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 评估任务模型 -->
+        <h2>5. 评估任务模型 (<code>evaluation_tasks</code> 表)</h2>
+        <p class="filepath">源文件: <code>/Users/bytedance/self/llm-center/internal/model/evaluation_task.go</code> | 模型名: <code>EvaluationTask</code></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>字段名 (Go)</th>
+                    <th>数据库类型</th>
+                    <th>描述</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>ID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>评估任务唯一标识符</td>
+                    <td>主键</td>
+                </tr>
+                <tr>
+                    <td><code>Name</code></td>
+                    <td><code>VARCHAR(255)</code></td>
+                    <td>任务名称</td>
+                    <td>非空</td>
+                </tr>
+                <tr>
+                    <td><code>Description</code></td>
+                    <td><code>TEXT</code></td>
+                    <td>任务描述</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>AgentID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>被评估的 Agent ID</td>
+                    <td>索引, 外键关联到 <code>agents.id</code></td>
+                </tr>
+                <tr>
+                    <td><code>DatasetID</code></td>
+                    <td><code>BIGINT UNSIGNED NULL</code></td>
+                    <td>使用的数据集 ID (可选)</td>
+                    <td>索引, 可能外键关联到 <code>evaluation_datasets.id</code></td>
+                </tr>
+                <tr>
+                    <td><code>Metrics</code></td>
+                    <td><code>TEXT</code></td>
+                    <td>评估指标 (例如: JSON 字符串)</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>Status</code></td>
+                    <td><code>VARCHAR(50)</code></td>
+                    <td>任务状态 (pending, running, completed 等)</td>
+                    <td>默认为 'pending'</td>
+                </tr>
+                <tr>
+                    <td><code>Results</code></td>
+                    <td><code>LONGTEXT</code></td>
+                    <td>评估结果 (例如: JSON 字符串)</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>CreatorID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>创建任务的用户 ID</td>
+                    <td>索引, 非空, 外键关联到 <code>users.id</code></td>
+                </tr>
+                <tr>
+                    <td><code>StartedAt</code></td>
+                    <td><code>DATETIME NULL</code></td>
+                    <td>任务开始时间</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>CompletedAt</code></td>
+                    <td><code>DATETIME NULL</code></td>
+                    <td>任务完成时间</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>CreatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>创建时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>UpdatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>最后更新时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>DeletedAt</code></td>
+                    <td><code>DATETIME NULL</code></td>
+                    <td>软删除时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- AI 模型信息表 -->
+        <h2>6. AI 模型信息表 (<code>models</code> 表)</h2>
+        <p class="filepath">源文件: <code>/Users/bytedance/self/llm-center/internal/model/model.go</code> | 模型名: <code>Model</code></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>字段名 (Go)</th>
+                    <th>数据库类型</th>
+                    <th>描述</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>ID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>AI 模型记录唯一标识符</td>
+                    <td>主键</td>
+                </tr>
+                <tr>
+                    <td><code>Name</code></td>
+                    <td><code>VARCHAR(100)</code></td>
+                    <td>模型的唯一名称/ID (例如 "gpt-3.5-turbo")</td>
+                    <td>唯一索引, 非空</td>
+                </tr>
+                <tr>
+                    <td><code>Description</code></td>
+                    <td><code>TEXT</code></td>
+                    <td>模型描述</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>CreatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>创建时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>UpdatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>最后更新时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>DeletedAt</code></td>
+                    <td><code>DATETIME NULL</code></td>
+                    <td>软删除时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- RAG 嵌入记录表 -->
+        <h2>7. RAG 嵌入记录表 (<code>rag_embeddings</code> 表)</h2>
+        <p class="filepath">源文件: <code>/Users/bytedance/self/llm-center/internal/model/rag_embedding.go</code> | 模型名: <code>RagEmbedding</code></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>字段名 (Go)</th>
+                    <th>数据库类型</th>
+                    <th>描述</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>ID</code></td>
+                    <td><code>BIGINT UNSIGNED</code></td>
+                    <td>RAG 嵌入记录唯一标识符</td>
+                    <td>主键</td>
+                </tr>
+                <tr>
+                    <td><code>FileName</code></td>
+                    <td><code>VARCHAR(255)</code></td>
+                    <td>被嵌入的文件名称</td>
+                    <td>非空, 索引</td>
+                </tr>
+                <tr>
+                    <td><code>CreatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>创建时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>UpdatedAt</code></td>
+                    <td><code>DATETIME</code></td>
+                    <td>最后更新时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+                <tr>
+                    <td><code>DeletedAt</code></td>
+                    <td><code>DATETIME NULL</code></td>
+                    <td>软删除时间</td>
+                    <td>由 GORM 自动管理</td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+</body>
+</html>
