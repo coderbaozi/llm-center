@@ -7,7 +7,7 @@ type Message struct {
 	Role           string `json:"role"`
 	Content        string `json:"content"`
 	AgentID        uint   `json:"agent_id"`
-	ConversationID string `json:"conversations_id"`
+	ConversationID string `json:"conversion_id"`
 	UserID         uint   `json:"user_id"`
 }
 

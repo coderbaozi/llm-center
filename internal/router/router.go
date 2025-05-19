@@ -34,5 +34,9 @@ func RegisterRoutes(h *server.Hertz) {
 		auth.PUT("/agent/:id", handler.UpdateAgent)          // 更新 Agent
 		auth.DELETE("/agent/:id", handler.DeleteAgent)       // 删除 Agent
 		auth.GET("/agent/messages/:id", handler.GetMessages) // 根据会话ID获取消息列表
+		auth.POST("/conversion/create", handler.CreateConversion)
+		auth.GET("/conversion/list", handler.ListConversions)
+		auth.POST("/conversion/update", handler.UpdateConversion)
+		auth.POST("/conversion/chat", handler.Chat)
 	}
 }
